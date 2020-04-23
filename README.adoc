@@ -1,8 +1,9 @@
 
 = Eventuate Tram Sagas Customers and Orders
 
-This FORK extends the example with an additional product microservice; including product information and stock limit, part of the saga.
-Also includes a Work In Progress API Gateway.
+This FORK extends the example with an additional `product microservice`; including product information and stock limit as part of the saga.
+
+Also includes a Work In Progress `API Gateway`.
 
 
 This application  demonstrates how to maintain data consistency in an Java/JDBC/JPA-based  microservice architecture using http://microservices.io/patterns/data/saga.html[sagas].
@@ -185,10 +186,3 @@ Content-Type: application/json;charset=UTF-8
 }
 ```
 
-== Got questions?
-
-Don't hesitate to create an issue or see
-
-* https://groups.google.com/d/forum/eventuate-users[Mailing list]
-* https://eventuate-users.slack.com[Slack]. https://eventuateusersslack.herokuapp.com/[Get invite]
-* http://eventuate.io/contact.html[Contact us].
