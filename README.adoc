@@ -1,16 +1,21 @@
 
 = Eventuate Tram Sagas Customers and Orders
 
+This FORK extends the example with an additional product microservice; including product information and stock limit, part of the saga.
+Also includes a Work In Progress API Gateway.
+
+
 This application  demonstrates how to maintain data consistency in an Java/JDBC/JPA-based  microservice architecture using http://microservices.io/patterns/data/saga.html[sagas].
 
-The application consists of two services:
+The application consists of three services:
 
 * `Order Service` - creates orders
 * `Customer Service` - manages customers
+* `Product Service` - manages products
 
-Both services are implemented using Spring Boot, JPA and the https://github.com/eventuate-tram/eventuate-tram-sagas[Eventuate Tram Saga framework]
+All services are implemented using Spring Boot, JPA and the https://github.com/eventuate-tram/eventuate-tram-sagas[Eventuate Tram Saga framework]
 
-The `Order Service` uses a saga to enforce the customer's credit limit when creating orders.
+The `Order Service` uses a saga to enforce the customer's credit limit when creating orders. On top of that, the saga will enforce product stock limit. 
 
 == About sagas
 
@@ -45,23 +50,31 @@ It consists of the follow steps:
 . The `CreateOrderSaga` sends a `ReserveCredit` command to the `CustomerService`
 . The `Customer Service` receives the command and attempts to reserve credit for that `Order`. It replies with a message indicating the outcome.
 . The `CreateOrderSaga` receives the reply
+. The `CreateOrderSaga` sends a `ReserveStock` command to the `ProductService`
+. The `Product Service` receives the command and attempts to reserve stock for that `Order`. It replies with a message indicating the outcome.
+. The `CreateOrderSaga` receives the reply
 . It send either an `ApproveOrder` or a `RejectOrder` command to the `OrderService`
 . The `Order Service` receives the command and changes state of the order to either `approved` or `rejected`.
 
 === Architecture
 
-The following diagram shows the architecture of the Customers and Orders application.
+The following diagram shows the architecture of the Customers, Products and Orders application.
 
 image::./images/Eventuate_Tram_Customer_and_Order_Orchestration_Architecture.png[]
 
 The application consists of two services:
 
 * `Customer Service` - implements the REST endpoints for managing customers.
-The service persists the `Customer` JPA entity in a MySQL/Postgres database.
+The service persists the `Customer` JPA entity in a MySQL database.
 Using the https://github.com/eventuate-tram/eventuate-tram-sagas[Eventuate Tram Saga framework], it processes command messages, updates its the `Customer` entity, and sends back a reply message.
 
+* `Product Service` - implements the REST endpoints for managing products.
+The service persists the `Product` JPA entity in a MySQL database.
+Using the https://github.com/eventuate-tram/eventuate-tram-sagas[Eventuate Tram Saga framework], it processes command messages, updates its the `Product` entity, and sends back a reply message.
+
+
 * `Order Service` - implements a REST endpoint for managing orders.
-The service persists the `Order` JPA entity and the `CreateOrderSaga` in MySQL/Postgres database.
+The service persists the `Order` JPA entity and the `CreateOrderSaga` in MySQL database.
 Using the https://github.com/eventuate-tram/eventuate-tram-sagas[Eventuate Tram Saga framework], it sends command messages and processes replies.
 
 The Eventuate Tram CDC service tracks inserts into the `MESSAGE` table using the MySQL binlog and publishes messages to Apache Kafka.
@@ -99,6 +112,7 @@ Once the application has started, you can use the application via the Swagger UI
 
 * `Order Service` - `http://${DOCKER_HOST_IP}:8081/swagger-ui.html`
 * `Customer Service` - `http://${DOCKER_HOST_IP}:8082/swagger-ui.html`
+* `Product Service` - `http://${DOCKER_HOST_IP}:8083/swagger-ui.html`
 
 You can also use `curl` to interact with the services.
 First, let's create a customer:
@@ -118,6 +132,23 @@ Content-Type: application/json;charset=UTF-8
   "customerId": 1
 }
 ```
+Next, create a product:
+
+```bash
+$ curl -X POST --header "Content-Type: application/json" -d '{
+  "stock": {
+    "amount": 12
+  },
+  "name": "Chair"
+}' http://${DOCKER_HOST_IP}:8083/products
+
+HTTP/1.1 200
+Content-Type: application/json;charset=UTF-8
+
+{
+  "productId": 1
+}
+```
 
 Next, create an order:
 
@@ -126,7 +157,9 @@ $ curl -X POST --header "Content-Type: application/json" -d '{
   "customerId": 1,
   "orderTotal": {
     "amount": 4
-  }
+  },
+  "productId": 1,
+  "orderUnits": 6
 }' http://${DOCKER_HOST_IP}:8081/orders
 
 HTTP/1.1 200
